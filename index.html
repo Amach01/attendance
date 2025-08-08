@@ -20,17 +20,34 @@
     <section id="auth-forms">
       <div id="signup" class="card hidden">
         <h2>Create account</h2>
-        <label>Email <input type="email" id="signup-email" required></label>
-        <label>Password <input type="password" id="signup-password" required></label>
-        <label>Full name (optional) <input type="text" id="signup-name"></label>
+        <label>Username
+          <input type="text" id="signup-username" minlength="3" maxlength="32" autocomplete="username" required>
+        </label>
+        <label>Password
+          <input type="password" id="signup-password" minlength="6" autocomplete="new-password" required>
+        </label>
+        <details class="hint">
+          <summary>Optional email</summary>
+          <p>If you add an email, you can reset your password later. We won’t send confirmation emails.</p>
+        </details>
+        <label>Email (optional)
+          <input type="email" id="signup-email" autocomplete="email" placeholder="you@example.com">
+        </label>
+        <label>Full name (optional)
+          <input type="text" id="signup-name" autocomplete="name">
+        </label>
         <button id="btn-signup">Sign Up</button>
         <p class="hint">Already have an account? <a href="#" id="link-show-login">Login</a></p>
       </div>
 
       <div id="login" class="card">
         <h2>Login</h2>
-        <label>Email <input type="email" id="login-email" required></label>
-        <label>Password <input type="password" id="login-password" required></label>
+        <label>Username or Email
+          <input type="text" id="login-identifier" autocomplete="username" required>
+        </label>
+        <label>Password
+          <input type="password" id="login-password" autocomplete="current-password" required>
+        </label>
         <button id="btn-login">Login</button>
         <p class="hint">No account? <a href="#" id="link-show-signup">Sign up</a></p>
       </div>
