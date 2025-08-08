@@ -1,9 +1,9 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 
-// ======= CONFIG: fill these with your Supabase project settings =======
-const SUPABASE_URL = 'https://afdgcszxttuqnqxesvjb.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFmZGdjc3p4dHR1cW5xeGVzdmpiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ2NDU2MTAsImV4cCI6MjA3MDIyMTYxMH0.rI-q8BsEywmF7iw30pO77qINtPT07X4VvCqIUaZ7ASs';
-const REQUIRED_CORRECT = 5; // all 5 must be correct
+// ======= CONFIG: replace with your Supabase project settings =======
+const SUPABASE_URL = 'https://YOUR-PROJECT-REF.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR-ANON-KEY';
+const REQUIRED_CORRECT = 5; // must get all 5 correct
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -20,12 +20,13 @@ const loginCard = document.getElementById('login');
 const linkShowLogin = document.getElementById('link-show-login');
 const linkShowSignup = document.getElementById('link-show-signup');
 
-const signupEmail = document.getElementById('signup-email');
+const signupUsername = document.getElementById('signup-username');
 const signupPassword = document.getElementById('signup-password');
+const signupEmail = document.getElementById('signup-email');
 const signupName = document.getElementById('signup-name');
 const btnSignup = document.getElementById('btn-signup');
 
-const loginEmail = document.getElementById('login-email');
+const loginIdentifier = document.getElementById('login-identifier');
 const loginPassword = document.getElementById('login-password');
 const btnLogin = document.getElementById('btn-login');
 
@@ -34,7 +35,7 @@ const btnSubmitQuiz = document.getElementById('btn-submit-quiz');
 const resultDiv = document.getElementById('result');
 const attemptsInfo = document.getElementById('attempts-info');
 
-// Simple UI state helpers
+// UI helpers
 function showLogin() {
   signupCard.classList.add('hidden');
   loginCard.classList.remove('hidden');
@@ -54,64 +55,117 @@ function showAuth() {
   btnLogout.classList.add('hidden');
 }
 
-// Wire up header buttons
 btnShowLogin.addEventListener('click', (e) => { e.preventDefault(); showLogin(); });
 btnShowSignup.addEventListener('click', (e) => { e.preventDefault(); showSignup(); });
 linkShowLogin.addEventListener('click', (e) => { e.preventDefault(); showLogin(); });
 linkShowSignup.addEventListener('click', (e) => { e.preventDefault(); showSignup(); });
 
-// Auth actions
+// Username helpers
+function isEmail(str){ return /@/.test(str); }
+
+async function getEmailForUsername(username){
+  const { data, error } = await supabase.rpc('email_for_username', { name: username });
+  if (error) throw error;
+  return data?.email || null;
+}
+
+async function isUsernameAvailable(username){
+  const { data, error } = await supabase.rpc('is_username_available', { name: username });
+  if (error) throw error;
+  return !!data?.available;
+}
+
+// Signup
 btnSignup.addEventListener('click', async () => {
   btnSignup.disabled = true;
-  const email = signupEmail.value.trim();
-  const password = signupPassword.value.trim();
-  const name = signupName.value.trim();
+  const username = (signupUsername.value || '').trim().toLowerCase();
+  const password = (signupPassword.value || '').trim();
+  const emailOpt = (signupEmail.value || '').trim();
+  const full_name = (signupName.value || '').trim();
 
-  const { data, error } = await supabase.auth.signUp({ email, password });
-  if (error) {
-    alert('Sign up error: ' + error.message);
+  if (!username || username.length < 3) {
+    alert('Username must be at least 3 characters.');
     btnSignup.disabled = false;
     return;
   }
-  // Create profile row
-  const user = data.user;
-  if (user) {
-    await supabase.from('profiles').insert({ user_id: user.id, full_name: name }).catch(()=>{});
+  if (!password || password.length < 6) {
+    alert('Password must be at least 6 characters.');
+    btnSignup.disabled = false;
+    return;
   }
-  alert('Check your email to confirm account (if confirmation is enabled).');
-  btnSignup.disabled = false;
-  showLogin();
+
+  try {
+    const free = await isUsernameAvailable(username);
+    if (!free) {
+      alert('Username not available, please choose another.');
+      btnSignup.disabled = false;
+      return;
+    }
+
+    // Supabase needs email or phone. If no email, use a non-routable alias.
+    const finalEmail = emailOpt || `${username}@local.invalid`;
+
+    // With email confirmations OFF, user is created immediately.
+    const { data, error } = await supabase.auth.signUp({ email: finalEmail, password });
+    if (error) throw error;
+
+    const user = data.user;
+    if (user) {
+      await supabase.from('profiles')
+        .insert({ user_id: user.id, username, full_name, email: finalEmail });
+    }
+
+    alert('Account created. You can login now.');
+    showLogin();
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Sign up failed');
+  } finally {
+    btnSignup.disabled = false;
+  }
 });
 
+// Login (username or email)
 btnLogin.addEventListener('click', async () => {
   btnLogin.disabled = true;
-  const email = loginEmail.value.trim();
-  const password = loginPassword.value.trim();
+  const identifier = (loginIdentifier.value || '').trim();
+  const password = (loginPassword.value || '').trim();
 
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) alert('Login error: ' + error.message);
-  btnLogin.disabled = false;
+  try {
+    let email = identifier;
+    if (!isEmail(identifier)) {
+      const mapped = await getEmailForUsername(identifier.toLowerCase());
+      if (!mapped) throw new Error('No such username.');
+      email = mapped;
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+  } catch (err) {
+    console.error(err);
+    alert(err.message || 'Login failed');
+  } finally {
+    btnLogin.disabled = false;
+  }
 });
 
+// Logout
 btnLogout.addEventListener('click', async () => {
   await supabase.auth.signOut();
 });
 
-// Listen to auth state
-supabase.auth.onAuthStateChange(async (event, session) => {
+// Auth state
+supabase.auth.onAuthStateChange(async (_event, session) => {
   if (session?.user) {
     showApp();
     loadQuiz();
-    // try to fetch attempts row for info (optional)
     await refreshAttemptsInfo();
   } else {
     showAuth();
   }
 });
 
+// Attempts info
 async function refreshAttemptsInfo() {
-  // Optional: query attempts for today to show attempts used
-  // We'll compute date in user's local timezone; server uses TZ Asia/Karachi for enforcement.
   const today = new Date();
   const yyyy = today.getFullYear();
   const mm = String(today.getMonth() + 1).padStart(2, '0');
@@ -140,6 +194,7 @@ async function refreshAttemptsInfo() {
   else attemptsInfo.textContent = `Attempts used today: ${data.attempts}. Attempts left: ${left}.`;
 }
 
+// Quiz
 async function loadQuiz() {
   quizDiv.innerHTML = '<p class="muted">Loading quiz…</p>';
   const { data, error } = await supabase.rpc('get_quiz', { n: 5 });
@@ -172,6 +227,7 @@ function renderQuiz(questions) {
   });
 }
 
+// Submit quiz
 btnSubmitQuiz.addEventListener('click', async () => {
   resultDiv.className = 'result';
   resultDiv.textContent = '';
@@ -183,7 +239,6 @@ btnSubmitQuiz.addEventListener('click', async () => {
     resultDiv.textContent = 'Quiz not loaded.';
     return;
   }
-  // Collect answers
   questionBlocks.forEach((qEl, qi) => {
     const chosen = qEl.querySelector(`input[name="q${qi}"]:checked`);
     if (!chosen) return;
