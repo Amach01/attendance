@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Attendance System</title>
+  <link rel="stylesheet" href="styles.css"/>
+</head>
+<body>
+  <header>
+    <h1>Attendance System</h1>
+    <nav>
+      <button id="btn-show-login">Login</button>
+      <button id="btn-show-signup">Sign Up</button>
+      <button id="btn-logout" class="hidden">Logout</button>
+    </nav>
+  </header>
+
+  <main>
+    <section id="auth-forms">
+      <div id="signup" class="card hidden">
+        <h2>Create account</h2>
+        <label>Email <input type="email" id="signup-email" required></label>
+        <label>Password <input type="password" id="signup-password" required></label>
+        <label>Full name (optional) <input type="text" id="signup-name"></label>
+        <button id="btn-signup">Sign Up</button>
+        <p class="hint">Already have an account? <a href="#" id="link-show-login">Login</a></p>
+      </div>
+
+      <div id="login" class="card">
+        <h2>Login</h2>
+        <label>Email <input type="email" id="login-email" required></label>
+        <label>Password <input type="password" id="login-password" required></label>
+        <button id="btn-login">Login</button>
+        <p class="hint">No account? <a href="#" id="link-show-signup">Sign up</a></p>
+      </div>
+    </section>
+
+    <section id="app" class="hidden">
+      <div class="card">
+        <h2>Mark Attendance</h2>
+        <p id="attempts-info" class="muted">You have 2 attempts per day.</p>
+        <div id="quiz"></div>
+        <button id="btn-submit-quiz">Submit</button>
+        <div id="result" class="result"></div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <small>Built with Supabase + GitHub Pages</small>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
